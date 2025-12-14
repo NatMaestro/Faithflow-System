@@ -1,0 +1,95 @@
+services:
+  # Backend API (Django) - Using Neon PostgreSQL (DATABASE_URL from .env)
+  backend:
+    build:
+      context: ./faithflow-backend
+      dockerfile: Dockerfile
+    container_name: faithflows-backend
+    restart: unless-stopped
+    env_file:
+      - ./faithflow-backend/.env
+    environment:
+      DEBUG: ${DEBUG:-True} # Default to True for development
+      SECRET_KEY: ${SECRET_KEY:-your-super-secret-key-change-this-in-production}
+      # DATABASE_URL is loaded from .env file (Neon PostgreSQL)
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080,http://localhost:5173}
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    # No depends_on - connects directly to Neon PostgreSQL
+    networks:
+      - faithflows-network
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/')",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    volumes:
+      - ./faithflow-backend:/app
+      - static_volume:/app/static
+      - media_volume:/app/media
+
+  # Frontend
+  frontend:
+    build:
+      context: ./faithflow-studio
+      dockerfile: Dockerfile
+    container_name: faithflows-frontend
+    restart: unless-stopped
+    environment:
+      VITE_API_URL: ${VITE_API_URL:-http://backend:8000/api/v1}
+    ports:
+      - "${FRONTEND_PORT:-8080}:80"
+    depends_on:
+      - backend
+    networks:
+      - faithflows-network
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost/",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis (for caching and sessions - optional but recommended)
+  redis:
+    image: redis:7-alpine
+    container_name: faithflows-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - faithflows-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    command: redis-server --appendonly yes
+
+networks:
+  faithflows-network:
+    driver: bridge
+
+volumes:
+  redis_data:
+    driver: local
+  static_volume:
+    driver: local
+  media_volume:
+    driver: local
