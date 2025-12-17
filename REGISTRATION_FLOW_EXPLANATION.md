@@ -110,3 +110,5 @@
 5. Refresh page → Should still show success page (state restored)
 6. Click "Go to Your Church Login" → Should navigate to correct subdomain
 
+
+
