@@ -1,279 +1,163 @@
-# ⛪ FaithFlows - Church Management System
+# ⛪ FaithFlows
 
-A comprehensive, multi-tenant church management platform built with modern web technologies.
+A multi-tenant church management platform. Each church is a tenant with its own
+PostgreSQL schema, reached at its own subdomain.
 
-## 🌟 Features
+This repository is a thin shell: the application lives in two submodules.
 
-### For Church Members
-
-- 📊 Personal Dashboard
-- 👤 Profile Management
-- 💵 Online Giving & Payment History
-- 📅 Event RSVP & Calendar
-- 📢 Announcements & Updates
-- 👥 Ministry & Small Group Management
-- 🤝 Volunteer Opportunities
-- 🙏 Prayer Requests & Altar Calls
-- 📝 Service Requests (Baptism, Marriage, etc.)
-
-### For Church Administrators
-
-- 📊 Comprehensive Dashboard & Analytics
-- 👥 Member Management
-- 📅 Event Planning & Management
-- 💰 Financial Tracking & Reporting
-- 📢 Announcement System
-- 👨‍💼 Role & Permission Management
-- 👥 Ministry & Volunteer Management
-- 🧾 Tax Receipt Generation
-- ⚙️ Church Settings & Customization
-- 🎨 Theme Customization
-
-### For Platform Administrators
-
-- 🏢 Multi-Tenant Management
-- 🔧 Denomination Configuration
-- 📊 System-Wide Analytics
-- ⚡ Feature Flags Management
+| Path | What it is | Repository |
+| --- | --- | --- |
+| `faithflow-backend/` | Django REST API | [churchcms-be-v2](https://github.com/NatMaestro/churchcms-be-v2) |
+| `faithflow-studio/` | React web client | [faithflow-studio](https://github.com/NatMaestro/faithflow-studio) |
 
 ---
 
-## 🚀 Quick Start with Docker (Recommended)
+## Tech stack
 
-The easiest way to get started is using Docker:
+**Backend** — Django 4.2, Django REST Framework, `django-tenants` (schema per
+church), PostgreSQL (Neon), SimpleJWT, drf-spectacular. Python 3.11.
+
+**Frontend** — React 18, TypeScript, Vite, Redux Toolkit, React Router v6,
+shadcn/ui on Tailwind, Axios.
+
+**Deployment** — the backend runs on Render under `config.settings_production`;
+the frontend builds to static assets served from S3 behind CloudFront. Both
+deploy from `main` via GitHub Actions.
+
+---
+
+## Getting started
 
 ```bash
-# 1. Clone the repository
-git clone <repository-url>
+# The application code is in submodules — a plain clone leaves them empty.
+git clone --recurse-submodules <repository-url>
 cd faithflows
 
-# 2. Setup environment
-cp env.example .env
-
-# 3. Start everything with one command
-docker-compose -f docker-compose.dev.yml up
-
-# 4. Access the application
-# Frontend: http://localhost:8080
-# Backend: http://localhost:3000
+# Already cloned without them?
+git submodule update --init
 ```
-
-**📖 See [DOCKER_SETUP.md](DOCKER_SETUP.md) for complete Docker documentation.**
-
----
-
-## 💻 Manual Setup (Without Docker)
-
-If you prefer to run without Docker:
-
-### Prerequisites
-
-- Node.js 20+
-- PostgreSQL 16+
-- npm or yarn
-
-### Backend Setup
-
-```bash
-cd churchcms-be
-
-# Install dependencies
-npm install
-
-# Setup environment
-cp .env.example .env
-# Edit .env with your database credentials
-
-# Generate Prisma Client
-npx prisma generate
-
-# Run migrations
-npx prisma migrate dev
-
-# Seed database
-npm run seed
-
-# Start development server
-npm run start:dev
-```
-
-### Frontend Setup
-
-```bash
-cd faithflow-studio
-
-# Install dependencies
-npm install
-
-# Start development server
-npm run dev
-```
-
----
-
-## 🏗️ Tech Stack
-
-### Frontend
-
-- **Framework**: React 18 + TypeScript
-- **Build Tool**: Vite
-- **State Management**: Redux Toolkit
-- **UI Components**: Shadcn/ui + Tailwind CSS
-- **Routing**: React Router v6
-- **Forms**: React Hook Form
-- **HTTP Client**: Axios
-- **Animations**: Framer Motion
 
 ### Backend
 
-- **Framework**: NestJS + TypeScript
-- **Database**: PostgreSQL + Prisma ORM
-- **Authentication**: JWT
-- **Validation**: class-validator
-- **Documentation**: Swagger/OpenAPI
-- **Caching**: Redis (optional)
+```bash
+cd faithflow-backend
+python -m venv venv && source venv/Scripts/activate   # Linux/macOS: venv/bin/activate
+pip install -r requirements.txt
 
-### DevOps
+cp env.example .env        # then set DATABASE_URL and SECRET_KEY
 
-- **Containerization**: Docker + Docker Compose
-- **Reverse Proxy**: Nginx
-- **Database**: PostgreSQL 16
-- **Cache**: Redis 7
-
----
-
-## 📁 Project Structure
-
-```
-faithflows/
-├── docker-compose.yml              # Production Docker setup
-├── docker-compose.dev.yml          # Development Docker setup
-├── DOCKER_SETUP.md                 # Docker documentation
-├── FRONTEND_BACKEND_REQUIREMENTS.md # API documentation
-│
-├── faithflow-studio/               # Frontend application
-│   ├── src/
-│   │   ├── features/              # Feature modules
-│   │   ├── components/            # Reusable components
-│   │   ├── store/                 # Redux store
-│   │   ├── api/                   # API services
-│   │   └── utils/                 # Utilities
-│   ├── Dockerfile                 # Production Dockerfile
-│   ├── Dockerfile.dev             # Development Dockerfile
-│   └── nginx.conf                 # Nginx configuration
-│
-└── churchcms-be/                  # Backend application
-    ├── src/
-    │   ├── modules/               # Feature modules
-    │   ├── shared/                # Shared utilities
-    │   └── database/              # Database services
-    ├── prisma/
-    │   └── schema.prisma          # Database schema
-    ├── Dockerfile                 # Production Dockerfile
-    └── Dockerfile.dev             # Development Dockerfile
+python manage.py migrate_schemas --shared
+python manage.py migrate_schemas
+python manage.py runserver                            # http://localhost:8000
 ```
 
----
+### Frontend
 
-## 🔑 Default Credentials
+```bash
+cd faithflow-studio
+npm install
 
-### Superadmin
+cp env.example .env        # VITE_API_URL, e.g. http://localhost:8000/api/v1
 
-- Email: `superadmin@faithflows.com`
-- Password: `super123`
+npm run dev                                           # http://localhost:8080
+```
 
-### Olam Church Admin
+`VITE_API_URL` is inlined at **build** time, not read at runtime — setting it on
+an already-built container has no effect.
 
-- Email: `nathanielguggisberg@gmail.com`
-- Password: `olam@church`
+### Multi-tenancy locally
 
-### Olam Church Members (Demo)
-
-All members use temporary password: `OLAMParish@2025`
-
-- `anasfiat@yahoo.com`
-- `mild.aikins@gmail.com`
-- `ghampsongloria@gmail.com`
-
-**Note:** First-time login requires password change.
-
----
-
-## 🌐 Multi-Tenancy
-
-FaithFlows supports multiple churches with subdomain-based routing:
-
-- `olamchurch.localhost:8080` - Olam Church
-- `gracechurch.localhost:8080` - Grace Church
-- etc.
-
-For local development, add entries to your hosts file:
+Tenants are selected by the `X-Tenant-Subdomain` header, which the client
+derives from the hostname. To exercise that locally, add entries to your hosts
+file and browse to the subdomain rather than bare `localhost`:
 
 ```
 127.0.0.1 olamchurch.localhost
 127.0.0.1 gracechurch.localhost
 ```
 
----
-
-## 📚 Documentation
-
-- [Docker Setup Guide](DOCKER_SETUP.md) - Complete Docker documentation
-- [Frontend-Backend Requirements](FRONTEND_BACKEND_REQUIREMENTS.md) - API specifications
-- [Backend Documentation](churchcms-be/documentation/) - Backend implementation details
-- [Frontend README](faithflow-studio/README.md) - Frontend-specific documentation
+Then open `http://olamchurch.localhost:8080`.
 
 ---
 
-## 🤝 Contributing
+## Checks
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+Both submodules run CI on every pull request.
 
----
+```bash
+# faithflow-backend
+python manage.py check
+python manage.py makemigrations --check --dry-run
+python manage.py test tests.test_tenant_binding tests.test_subscription_webhook \
+                      tests.test_queryset_scoping tests.test_role_permissions
 
-## 📝 License
+# faithflow-studio
+npm run verify        # ratcheted typecheck + lint, then build
+```
 
-[Add your license here]
+The frontend carries a known backlog of TypeScript and ESLint errors, recorded
+in `quality-baseline.json`. CI fails on any **increase**, so the backlog does
+not block work while new problems still do. When you drive a count down, lock it
+in with `npm run ratchet:typecheck -- --update`.
 
----
-
-## 🆘 Support
-
-For issues and questions:
-
-- Check [DOCKER_SETUP.md](DOCKER_SETUP.md) for Docker troubleshooting
-- Review [FRONTEND_BACKEND_REQUIREMENTS.md](FRONTEND_BACKEND_REQUIREMENTS.md) for API documentation
-- Open an issue on GitHub
-
----
-
-## 🎯 Roadmap
-
-- ✅ Multi-tenant architecture
-- ✅ Role-based access control
-- ✅ Member & admin portals
-- ✅ Event management
-- ✅ Financial tracking
-- ✅ Ministry management
-- ✅ Volunteer tracking
-- ✅ Docker containerization
-- 🚧 Mobile app (React Native)
-- 🚧 Email integration
-- 🚧 SMS notifications
-- 🚧 Payment gateway integration
-- 🚧 Advanced analytics
+The backend test suites listed above need no database. The rest of `tests/`
+requires a provisioned tenant schema against a live PostgreSQL and is not yet
+wired into CI.
 
 ---
 
-**Built with ❤️ for churches worldwide**
+## Configuration worth knowing
 
+| Variable | Where | Notes |
+| --- | --- | --- |
+| `DATABASE_URL` | backend | PostgreSQL connection string. Required in production. |
+| `SECRET_KEY` | backend | Required in production; the development default is a known literal. |
+| `SETUP_TOKEN` | backend | Guards the unauthenticated initial-setup endpoint. Must be 32+ characters, or that endpoint stays disabled. |
+| `PAYSTACK_SECRET_KEY` | backend | Also verifies webhook signatures — without it, webhooks are rejected. |
+| `EMAIL_HOST_USER` / `EMAIL_HOST_PASSWORD` | backend | Password reset emails are the only delivery path for reset tokens. Unset means resets never reach users. |
+| `VITE_API_URL` | frontend | Build-time only. |
 
+---
 
+## Features
 
+**Members** — dashboard, profile, online giving and history, event RSVP,
+announcements, ministries and small groups, volunteering, prayer requests and
+altar calls, service requests (baptism, marriage, and so on).
 
+**Church administrators** — member management and imports, event planning,
+financial tracking and tax receipts, announcements, ministry and volunteer
+management, role and permission management, theming, church settings.
 
+**Platform administrators** — tenant management, denomination configuration,
+subscription and trial control, feature flags.
 
+Feature availability varies by denomination and by the church's plan; see
+`Church.get_default_features()` in `faithflow-backend/apps/churches/models.py`.
+
+---
+
+## Documentation
+
+- [`documentation/`](documentation/) — architecture and integration notes
+- [`faithflow-backend/documentation/`](faithflow-backend/documentation/) — API and backend detail
+- Interactive API reference at `/api/docs/` on a running backend
+
+Both documentation folders have accumulated point-in-time status reports
+alongside genuine reference material; treat undated "COMPLETE"/"FIX" write-ups
+as historical.
+
+---
+
+## Contributing
+
+1. Branch from `main`
+2. Make your change, with tests where the behaviour is testable
+3. Confirm CI passes
+4. Open a pull request
+
+---
+
+## License
+
+Not yet specified.

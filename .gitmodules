@@ -1,0 +1,6 @@
+[submodule "faithflow-backend"]
+	path = faithflow-backend
+	url = https://github.com/NatMaestro/churchcms-be-v2.git
+[submodule "faithflow-studio"]
+	path = faithflow-studio
+	url = https://github.com/NatMaestro/faithflow-studio.git
